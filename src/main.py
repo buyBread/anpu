@@ -1,8 +1,16 @@
 import sys
+import os
+import json
 import spotify
 import util
 
 if __name__ == "__main__":
+    if not os.path.exists(util.get_config_folder()):
+        os.makedirs(util.get_config_folder())
+
+        with open(util.get_config(), "w") as fp:
+            json.dump({ "client_id": "", "client_secret": "", "current_token": "" }, fp, indent=4)
+
     args = sys.argv
     args.pop(0)
     arg_count = len(args)

@@ -1,12 +1,17 @@
 import requests
 import json
+import util
 
 from urllib.parse import urlencode
 from base64 import b64encode
 
+# TODO:
+# - handle status codes more smartly
+
 class client:
     def __init__(self):
         self.access_token_expired = False
+        self.status_code = None
 
     def print_status_code(self, status_code, func):
         responses = {
@@ -30,7 +35,7 @@ class client:
     def __acquire_access_token(self):
         data = None
 
-        with open("../config.json", "r") as fp:
+        with open(util.get_config(), "r") as fp:
             data = json.load(fp)
 
             if data["current_token"] == "":
@@ -40,7 +45,7 @@ class client:
         if self.access_token_expired:
             print("__acquire_access_token(): Requesting a new Access Token.")
 
-            with open("../config.json", "r") as fp:
+            with open(util.get_config(), "r") as fp:
                 data = json.load(fp)
                 credentials = b64encode(
                     f"{data['client_id']}:{data['client_secret']}".encode())
@@ -57,12 +62,12 @@ class client:
             
             print("__acquire_access_token(): Access Token acquired!")
 
-            with open("../config.json", "r") as fp:
+            with open(util.get_config(), "r") as fp:
                 data = json.load(fp)
                 data["current_token"] = r.json()["access_token"]
             
             # because "r+" appends?
-            with open("../config.json", "w") as fp:
+            with open(util.get_config(), "w") as fp:
                 json.dump(data, fp, indent=4)
 
             self.access_token_expired = False
@@ -101,14 +106,14 @@ class client:
                 url=f"{url}/{id}",
                 headers={"Authorization": f"Bearer {self.__acquire_access_token()}"})
 
+            self.print_status_code(r.status_code, "search_link")
+
         if r.status_code == 400:
             print("search_link(): Invalid ID.")
             return
 
         if r.status_code == 404:
             return
-
-        print("search_link(): Complete!")
 
         return r.json()
 
@@ -128,6 +133,6 @@ class client:
                 url=f"https://api.spotify.com/v1/search?{urlencode(req)}",
                 headers={"Authorization": f"Bearer {self.__acquire_access_token()}"})
 
-        print("search_query(): Complete!")
+            self.print_status_code(r.status_code, "search_query")
 
         return r.json()
