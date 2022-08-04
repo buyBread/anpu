@@ -1,15 +1,20 @@
 import sys
-import os
 import json
 import spotify
 import util
 
 if __name__ == "__main__":
-    if not os.path.exists(util.get_config_folder()):
-        os.makedirs(util.get_config_folder())
+    with open(util.get_config(), "r") as fp:
+        data = json.load(fp)
 
-        with open(util.get_config(), "w") as fp:
-            json.dump({ "client_id": "", "client_secret": "", "current_token": "" }, fp, indent=4)
+        if data["client_id"] == "" or data["client_secret"] == "":
+            data["client_id"] = input("Enter your Spotify App's client ID: ")
+            data["client_secret"] = input("Enter your Spotify App's client secret: ")
+            data["current_token"] = "" # just in case
+
+            with open(util.get_config(), "w") as w_fp:
+                print("Writing config file...")
+                json.dump(data, w_fp, indent=4)
 
     args = sys.argv
     args.pop(0)
@@ -30,7 +35,9 @@ Options:
 """
         )
 
-    client = spotify.client()
+    client = spotify.client(
+        data["client_id"],
+        data["client_secret"])
 
     link = args[arg_count - 1]
 

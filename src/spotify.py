@@ -9,7 +9,10 @@ from base64 import b64encode
 # - handle status codes more smartly
 
 class client:
-    def __init__(self):
+    def __init__(self, id, secret):
+        self.id = id
+        self.secret = secret
+
         self.access_token_expired = False
         self.status_code = None
 
@@ -45,15 +48,13 @@ class client:
         if self.access_token_expired:
             print("__acquire_access_token(): Requesting a new Access Token.")
 
-            with open(util.get_config(), "r") as fp:
-                data = json.load(fp)
-                credentials = b64encode(
-                    f"{data['client_id']}:{data['client_secret']}".encode())
+            credentials = b64encode(
+                f"{self.id}:{self.secret}".encode())
 
-                r = requests.post(
-                    url="https://accounts.spotify.com/api/token",
-                    data={ "grant_type": "client_credentials" },
-                    headers={ "Authorization": f"Basic {credentials.decode()}" })
+            r = requests.post(
+                url="https://accounts.spotify.com/api/token",
+                data={ "grant_type": "client_credentials" },
+                headers={ "Authorization": f"Basic {credentials.decode()}" })
 
             self.print_status_code(r.status_code, "__acquire_access_token")
 
@@ -62,9 +63,7 @@ class client:
             
             print("__acquire_access_token(): Access Token acquired!")
 
-            with open(util.get_config(), "r") as fp:
-                data = json.load(fp)
-                data["current_token"] = r.json()["access_token"]
+            data["current_token"] = r.json()["access_token"]
             
             # because "r+" appends?
             with open(util.get_config(), "w") as fp:
@@ -73,8 +72,8 @@ class client:
             self.access_token_expired = False
             
             return data["current_token"]
-        else:
-            return data["current_token"]
+        
+        return data["current_token"]
 
     def search_link(self, link):
         if "track" in link:
