@@ -11,6 +11,7 @@ def get_config_folder():
     if sys.platform == "linux":
         config_folder = str(path.home()) + "/.config/anpu"
     elif "win" in sys.platform:
+        # appdata, what's that?
         config_folder = str(path.home()) + "/anpu"
     elif sys.platform == "darwin":
         # i have no clue how macos works
@@ -19,7 +20,10 @@ def get_config_folder():
         exit("Couldn't find the config folder.")
 
     if not os.path.exists(config_folder):
-        os.makedirs(config_folder)
+        try:
+            os.makedirs(config_folder)
+        except Exception as e: # probably impossible given where we're trying to write
+            exit(f"Can't create config folder.\n{e}")
 
     return config_folder
 
@@ -27,7 +31,7 @@ def get_config():
     config_file = str(get_config_folder() + "/config.json")
 
     if not os.path.exists(config_file):
-        with open(config_file, "w") as fp:
+        with open(config_file, "w") as fp: # surely if we can make a folder, we're allowed to create a file there
             json.dump({ "client_id": "", "client_secret": "", "current_token": "" }, fp, indent=4)
 
     return config_file

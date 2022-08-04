@@ -1,5 +1,13 @@
 # Anpu
-Search and Download songs, albums and playlists on Spotify using [youtube-dl](https://github.com/ytdl-org/youtube-dl/).
+A small utility to search and download songs, albums and playlists on Spotify using [youtube-dl](https://github.com/ytdl-org/youtube-dl/).  
+All downloads go to the "Home" Music folder.
+
+### Requirements
+* `requests`
+* `youtube-dl`
+```
+python -m pip install -U requests youtube-dl
+```
 
 ### Config
 1. Visit https://developer.spotify.com/dashboard to create an app.

@@ -1,22 +1,28 @@
 import requests
+import inspect
 import json
 import util
 
 from urllib.parse import urlencode
 from base64 import b64encode
 
-# TODO:
-# - handle status codes more smartly
-
 class client:
+    """
+    A small Spotify "client" to handle POST requests for Access Tokens and GET requests for songs, albums and playlists.
+
+    Has some small logging utility.
+    """
+
     def __init__(self, id, secret):
+        # app credentials
         self.id = id
         self.secret = secret
 
-        self.access_token_expired = False
-        self.status_code = None
+        self._request_access_token = False
+        self._redo_request = False
+        self.__status_code = None
 
-    def print_status_code(self, status_code, func):
+    def handle_status_code(self):
         responses = {
             200: "OK",
             201: "Created",
@@ -33,20 +39,25 @@ class client:
             503: "Service Unavailable",
         }
 
-        print(f"{func}(): Request: {responses.get(status_code, 'Unknown')}.")
+        if self.__status_code == 401: # expired access token
+            self._request_access_token = True
+            self._redo_request = True
+
+        return f"Request Status Code: {responses.get(self.__status_code, 'Unknown')}."
+
+    def log_activity(self, currentframe, msg):
+        # function name
+        print(f"{inspect.getframeinfo(currentframe)[2]}(): {msg}")
 
     def __acquire_access_token(self):
-        data = None
-
         with open(util.get_config(), "r") as fp:
             data = json.load(fp)
 
             if data["current_token"] == "":
-                print("__acquire_access_token(): Access Token not present.")
-                self.access_token_expired = True
+                self._request_access_token = True
 
-        if self.access_token_expired:
-            print("__acquire_access_token(): Requesting a new Access Token.")
+        if self._request_access_token:
+            self._request_access_token = False
 
             credentials = b64encode(
                 f"{self.id}:{self.secret}".encode())
@@ -56,82 +67,70 @@ class client:
                 data={ "grant_type": "client_credentials" },
                 headers={ "Authorization": f"Basic {credentials.decode()}" })
 
-            self.print_status_code(r.status_code, "__acquire_access_token")
+            self.__status_code = r.status_code
+
+            self.log_activity(
+                inspect.currentframe(), self.handle_status_code())
 
             if (r.status_code != 200):
-                return "Failed."
-            
-            print("__acquire_access_token(): Access Token acquired!")
+                exit(f"Failed to request a new access token.\n{self.handle_status_code()}")
 
             data["current_token"] = r.json()["access_token"]
             
             # because "r+" appends?
             with open(util.get_config(), "w") as fp:
                 json.dump(data, fp, indent=4)
-
-            self.access_token_expired = False
             
             return data["current_token"]
         
         return data["current_token"]
 
-    def search_link(self, link):
-        if "track" in link:
-            url = "https://api.spotify.com/v1/tracks"
-        elif "playlist" in link:
-            url = "https://api.spotify.com/v1/playlists"
-        elif "album" in link:
-            url = "https://api.spotify.com/v1/albums"
+    def send_request(self, req):
+        base_url = "https://api.spotify.com/v1"
+
+        if type(req) == str:
+            # no clue why you have that at the end when copying from spotify
+            id = req.split("/")[len(req.split("/")) - 1]
+            if "?" in id:
+                id = id.split("?")[0] 
+
+            if "track" in req:
+                url = f"{base_url}/tracks/{id}"
+            elif "playlist" in req:
+                url = f"{base_url}/playlists{id}"
+            elif "album" in req:
+                url = f"{base_url}/albums{id}"
+            else:
+                self.log_activity(
+                    inspect.currentframe(), "Invalid link. Only track, album and playlist links are supported.")
+                return
+        elif type(req) == dict:
+            url = f"{base_url}/search?{urlencode(req)}"
         else:
-            print("search_link(): Invalid link.")
-
-        link = link.split("/")
-        id = link[len(link) - 1]
-        if "?" in id:
-            id = id.split("?")[0]
-
-        r = requests.get(
-            url=f"{url}/{id}",
-            headers={"Authorization": f"Bearer {self.__acquire_access_token()}"})
-
-        self.print_status_code(r.status_code, "search_link")
-
-        if r.status_code == 401: # expired or invalid token
-            print("search_link(): Access Token has expired or is invalid.")
-
-            self.access_token_expired = True
-
-            r = requests.get(
-                url=f"{url}/{id}",
-                headers={"Authorization": f"Bearer {self.__acquire_access_token()}"})
-
-            self.print_status_code(r.status_code, "search_link")
-
-        if r.status_code == 400:
-            print("search_link(): Invalid ID.")
+            self.log_activity(
+                inspect.currentframe(), "How did this even happen?\n`req`:\n{req}")
             return
 
-        if r.status_code == 404:
-            return
-
-        return r.json()
-
-    def search_query(self, req):
         r = requests.get(
-            url=f"https://api.spotify.com/v1/search?{urlencode(req)}",
-            headers={"Authorization": f"Bearer {self.__acquire_access_token()}"})
+            url=url, headers={"Authorization": f"Bearer {self.__acquire_access_token()}"})
 
-        self.print_status_code(r.status_code, "search_query")
+        self.__status_code = r.status_code
 
-        if r.status_code == 401: # expired or invalid token
-            print("search_query(): Access Token has expired or is invalid.")
+        self.log_activity(
+            inspect.currentframe(), self.handle_status_code())
 
-            self.access_token_expired = True
-
+        if self._redo_request:
             r = requests.get(
-                url=f"https://api.spotify.com/v1/search?{urlencode(req)}",
-                headers={"Authorization": f"Bearer {self.__acquire_access_token()}"})
+                url=url, headers={"Authorization": f"Bearer {self.__acquire_access_token()}"})
 
-            self.print_status_code(r.status_code, "search_query")
+            self.__status_code = r.status_code
+
+            self.log_activity(
+                inspect.currentframe(), self.handle_status_code())
+
+        if  self.__status_code != 200: # let's say, hypothetically everything was ok
+            self.log_activity(
+                inspect.currentframe(), self.handle_status_code())
+            return
 
         return r.json()
