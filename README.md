@@ -29,7 +29,6 @@ usage: anpu <options> <query>
        anpu <link>
 
 Options:
-    --limit, -l                    Set the query limit (default=10).
     --track, -t                    Set search query type for tracks (default).
     --album, -a                    Set search query type for albums.
 ```
