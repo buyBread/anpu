@@ -75,4 +75,42 @@ Options:
     #   (match the duration too so we don't accidentally grab a wrong result)
     # - Download the matched result(s) to the "Music" folder.
 
-    print(client.send_request(req))
+    response = client.send_request(req)
+    #util.print_indented(response)
+
+    results = []
+
+    if any(x in response for x in ("albums", "tracks")):
+        category = query_type + "s"
+        
+        for item in response[category]["items"]:
+            idx = len(results)
+            results.append({})
+
+            if category == "tracks":
+                results[idx] = util.filter_track_json(item)
+
+            if category == "albums":
+                # we'll filter a lot more data later
+                results[idx]["name"] = item["name"]
+                results[idx]["image"] = item["images"][0]["url"]
+                results[idx]["artist"] = item["artists"][0]["name"]
+                results[idx]["href"] = item["href"] # because there's no tracks in this request
+
+        if len(results) < 10:
+            print("There isn't a lot of results for this query.")
+
+        # we're only doing this for queries because.. well.. 
+        # if a user links something, they're certain it's the song/album they need.
+        for num, item in enumerate(results):
+            entry = f"{num + 1}) {item['name']}\n   Artist: {item['artist']}"
+
+            try: # albums don't have an explicit rating apparently?
+                if item["explicit"]:
+                    entry += f" (Explicit)"
+            except:
+                pass
+
+            print(entry)
+    else:
+        print("todo")

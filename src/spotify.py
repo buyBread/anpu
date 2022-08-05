@@ -13,15 +13,19 @@ class client:
     Has some small logging utility.
     """
 
-    def __init__(self, id, secret):
+    def __init__(self, id, secret, debug=True):
         # app credentials
         self.id = id
         self.secret = secret
+        self.debug = debug
 
         self._request_access_token = False
         self._redo_request = False
         self.__status_code = None
 
+    # TODO:
+    # - Make this also handle turning off the booleans (for more automation)
+    #   (honestly.. this is just for prettier code)
     def handle_status_code(self):
         responses = {
             200: "OK",
@@ -45,9 +49,10 @@ class client:
 
         return f"Request Status Code: {responses.get(self.__status_code, 'Unknown')}."
 
-    def log_activity(self, currentframe, msg):
-        # function name
-        print(f"{inspect.getframeinfo(currentframe)[2]}(): {msg}")
+    def log_activity(self, msg):
+        if self.debug:
+            last_frame = inspect.currentframe().f_back
+            print(f"{inspect.getframeinfo(last_frame)[2]}(): {msg}")
 
     def __acquire_access_token(self):
         with open(util.get_config(), "r") as fp:
@@ -69,11 +74,10 @@ class client:
 
             self.__status_code = r.status_code
 
-            self.log_activity(
-                inspect.currentframe(), self.handle_status_code())
+            self.log_activity(self.handle_status_code())
 
-            if (r.status_code != 200):
-                exit(f"Failed to request a new access token.\n{self.handle_status_code()}")
+            if self.__status_code != 200:
+                exit("Failed to request a new access token.")
 
             data["current_token"] = r.json()["access_token"]
             
@@ -101,14 +105,15 @@ class client:
             elif "album" in req:
                 url = f"{base_url}/albums{id}"
             else:
-                self.log_activity(
-                    inspect.currentframe(), "Invalid link. Only track, album and playlist links are supported.")
+                self.log_activity("Invalid link. Only track, album and playlist links are supported.")
                 return
+
+            if base_url in req: # for when the reqest is already a valid API call
+                url = req
         elif type(req) == dict:
             url = f"{base_url}/search?{urlencode(req)}"
         else:
-            self.log_activity(
-                inspect.currentframe(), "How did this even happen?\n`req`:\n{req}")
+            self.log_activity("How did this even happen?\n`req`:\n{req}")
             return
 
         r = requests.get(
@@ -116,8 +121,7 @@ class client:
 
         self.__status_code = r.status_code
 
-        self.log_activity(
-            inspect.currentframe(), self.handle_status_code())
+        self.log_activity(self.handle_status_code())
 
         if self._redo_request:
             r = requests.get(
@@ -125,12 +129,10 @@ class client:
 
             self.__status_code = r.status_code
 
-            self.log_activity(
-                inspect.currentframe(), self.handle_status_code())
+            self.log_activity(self.handle_status_code())
 
-        if  self.__status_code != 200: # let's say, hypothetically everything was ok
-            self.log_activity(
-                inspect.currentframe(), self.handle_status_code())
+        if self.__status_code != 200: # let's say, hypothetically, everything was ok
+            self.log_activity(self.handle_status_code())
             return
 
         return r.json()
