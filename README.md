@@ -1,34 +1,49 @@
-# Anpu
-A small utility to search and download songs, albums and playlists on Spotify using [youtube-dl](https://github.com/ytdl-org/youtube-dl/).  
-All downloads go to the "Home" Music folder.
+#### Anpu (暗譜) - memorize or play a song from memory. 
+
+A small library to search Spotify music.  
+```
+python -m pip install anpu
+```
+
+### Features
+* Cleans up Spotify Links into API calls (tracks, albums and playlists only)
+* [Query search](https://developer.spotify.com/documentation/web-api/reference/#/operations/search)
 
 ### Requirements
 * `requests`
-* `youtube-dl`
 ```
-python -m pip install -U requests youtube-dl
+python -m pip install -U requests
 ```
 
 ### Config
-1. Visit https://developer.spotify.com/dashboard to create an app.
-2. Run `anpu` to create and configure the config file.
-
-*Anpu can be supplied a link or search query regardless of if you've configured it or not.*  
-  
-The config file is located in these directories respectively:
+Anpu requires the use of a config file to store the Access Token. The config file can also be used to store your App's credentials.  
+It is automatically created in these directories respectively:
 * **GNU/Linux**: `HOME/.config/anpu/config.json`
 * **macOS**: `HOME/Library/Preferences/anpu/config.json`
 * **Windows**: `%APPDATA%/anpu/config.json`
-*You can also give Anpu a link or search query as the main app is run right after configuration is finished.*
 
-### Usage
-```
-    Anpu (暗譜)
+### Example
+```py
+import anpu
 
-usage: anpu <options> <query>
-       anpu <link>
+client = anpu.client()
+# alternatively
+client = anpu.client(
+    id = "app_id",
+    secret = "app_secret"
+)
 
-Options:
-    --track, -t                    Set search query type for tracks (default).
-    --album, -a                    Set search query type for albums.
+# search query
+print(client.send_request(
+    {
+        "q": "very intresting query",
+        "type": "track",
+        "limit": 5
+    }
+))
+
+# get by link
+print(client.send_request(
+    "https://open.spotify.com/track/veryrealtrackid"
+))
 ```
