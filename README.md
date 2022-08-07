@@ -6,14 +6,13 @@ python -m pip install anpu
 ```
 
 ### Features
-* Cleans up Spotify Links into API calls (tracks, albums and playlists only)
-* [Query search](https://developer.spotify.com/documentation/web-api/reference/#/operations/search)
+* Cleans up Spotify Links into API calls (tracks, albums and playlists only).
+* [Query search](https://developer.spotify.com/documentation/web-api/reference/#/operations/search).
+
+Both of these are handled by a single function.
 
 ### Requirements
 * `requests`
-```
-python -m pip install -U requests
-```
 
 ### Config
 Anpu requires the use of a config file to store the Access Token. The config file can also be used to store your App's credentials.  

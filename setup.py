@@ -5,7 +5,7 @@ with open("README.md", "r") as fp:
 
 setup(
     name="anpu",
-    version="1.0",
+    version="v1",
     description="A small library to search Spotify music.",
     long_description=readme,
     long_description_content_type="text/markdown",
